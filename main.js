@@ -1,3 +1,5 @@
+document.body.style.cursor = 'none';
+
 import * as THREE from 'three';
 
 // Initialize the scene
