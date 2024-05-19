@@ -22,7 +22,7 @@ let dRoll = 0;
 let dPitch = 0;
 let rollSpeed = 0.0005;
 let pitchSpeed = 0.0002;
-let movementSpeed = 0.4;
+let movementSpeed = 0.3;
 let roll = 0;
 let pitch = 0;
 
@@ -117,7 +117,7 @@ function getGradientColor(i, segmentCount) {
     return color1.lerp(color2, i / segmentCount);
 }
 
-function buildTunnel(segmentCount = 100, segmentDistance = 5) {
+function buildTunnel(segmentCount = 250, segmentDistance = 2) {
     let curDirection = new THREE.Vector3(0, 0, -1); // Initial direction
     let curPosition = new THREE.Vector3(0, 0, 0); // Start at the origin
 
@@ -129,7 +129,7 @@ function buildTunnel(segmentCount = 100, segmentDistance = 5) {
         const geometry = new THREE.RingGeometry(4.5, 5, 32);
 				//const geometry = new THREE.TorusGeometry(5, 0.5, 16, 32);
         const material = new THREE.MeshBasicMaterial({
-            color: i % 2 === 0 ? 0xffff00 : 0x00ff00,
+            color: i % 2 === 0 ? 0x777777 : 0x888888,
             side: THREE.DoubleSide
         });
         const ring = new THREE.Mesh(geometry, material);
@@ -146,12 +146,12 @@ function buildTunnel(segmentCount = 100, segmentDistance = 5) {
         curPosition.add(curDirection.clone().multiplyScalar(segmentDistance));
 
         //let turnForce = (Math.random() - 0.5) * 1.5;
-				let turnForce = 0.07;
+				let turnForce = 0.05;
         let rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(axis, turnForce);
         curDirection.applyQuaternion(rotationQuaternion).normalize();
 
         // Slightly adjust the axis for the next step
-				const dAxis = 1.5;
+				const dAxis = 1.2;
         let axisAdjustment = new THREE.Vector3(
             (Math.random() - 0.5) * dAxis,
             (Math.random() - 0.5) * dAxis,
@@ -172,7 +172,7 @@ function buildTunnel(segmentCount = 100, segmentDistance = 5) {
 		directionalLight.position.set(5, 10, 7.5).normalize();
 		scene.add(directionalLight);*/
 		
-		scene.background = new THREE.Color(0x283344);
+		scene.background = new THREE.Color(0xaab0b3);
 }
 
 
