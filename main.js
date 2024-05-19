@@ -146,12 +146,12 @@ function buildTunnel(segmentCount = 100, segmentDistance = 5) {
         curPosition.add(curDirection.clone().multiplyScalar(segmentDistance));
 
         //let turnForce = (Math.random() - 0.5) * 1.5;
-				let turnForce = 0.1;
+				let turnForce = 0.07;
         let rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(axis, turnForce);
         curDirection.applyQuaternion(rotationQuaternion).normalize();
 
         // Slightly adjust the axis for the next step
-				const dAxis = 0.5;
+				const dAxis = 1.5;
         let axisAdjustment = new THREE.Vector3(
             (Math.random() - 0.5) * dAxis,
             (Math.random() - 0.5) * dAxis,
