@@ -1,22 +1,22 @@
-const backgroundColor = 0xaab0b3;
+const backgroundColor = 0xaaaeb6;
 const ringColor1 = 0x777777;
 const ringColor2 = 0x888888;
-const collisionColor = 0xffb0b3;
+const collisionColor = 0xff0000; // Color for collision
 
-const segmentCount = 250;
+const segmentCount = 150; // visible segments
 const segmentDistance = 2;
+const tunnelLength = 1000; // Total tunnel length in segments
 
 const wigliness = 1.2;
 const turnForce = 0.05;
 
-const rollSpeed = 0.0006;
-const rollDamp = 0.985;
+const rollSpeed = 0.0008;
+const rollDamp = 0.98;
 const pitchSpeed = 0.00007;
 const pitchDamp = 0.997;
 const movementSpeed = 0.3;
 
-
-
+const collisionDuration = 200; // color change (ms)
 
 document.body.style.cursor = 'none';
 
@@ -46,6 +46,8 @@ scoreElement.style.fontSize = '24px';
 document.body.appendChild(scoreElement);
 
 let collisionTimer = null;
+let curRingIndex = 0;
+
 
 document.addEventListener('keydown', function(event) {
     switch (event.key) {
@@ -116,26 +118,19 @@ function renderTunnel() {
 		renderer.render(scene, camera);
 }
 
-function gameLoop() {
-		updateCameraPosition();
-		applyCameraOrientation();
-		checkCollisions();
-		renderTunnel();
-		requestAnimationFrame(gameLoop);
-}
 
+let curPosition = new THREE.Vector3(0, 0, 0);
+let curDirection = new THREE.Vector3(0, 0, -1);
+//axis of rotation for tunnel's turns
+let axis = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize();
+let ind = 0;
+//let rings = [];
+let nSegments = 0;
 
-// not used
-function getGradientColor(i, segmentCount) {
-    const color1 = new THREE.Color(0xffff00);
-    const color2 = new THREE.Color(0x00ff00);
-    return color1.lerp(color2, i / segmentCount);
-}
-
-function addSegment(curPosition, curDirection, i) {
+function addSegment() {
 		const geometry = new THREE.RingGeometry(4.5, 5, 32);
 		const material = new THREE.MeshBasicMaterial({
-				color: i % 2 === 0 ? ringColor1 : ringColor2,
+				color: ind % 2 === 0 ? ringColor1 : ringColor2,
 				side: THREE.DoubleSide
 		});
 		const ring = new THREE.Mesh(geometry, material);
@@ -146,38 +141,92 @@ function addSegment(curPosition, curDirection, i) {
 		quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), curDirection);
 		ring.quaternion.copy(quaternion);
 
-		ring.userData = { index: i }; // Store the index of the ring
+		ring.userData = { index: ind++ };
 		scene.add(ring);
+		nSegments++;
+		
+		// Update the position for the next segment
+		curPosition.add(curDirection.clone().multiplyScalar(segmentDistance));
+
+		// Slightly adjust the axis of rotation
+		let axisAdjustment = new THREE.Vector3(
+				(Math.random() - 0.5) * wigliness,
+				(Math.random() - 0.5) * wigliness,
+				(Math.random() - 0.5) * wigliness
+		);
+		axis.add(axisAdjustment).normalize();
+		// Ensure the axis is orthogonal to the current direction
+		axis.projectOnPlane(curDirection).normalize();
+		
+		// update the direction
+		let rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(axis, turnForce);
+		curDirection.applyQuaternion(rotationQuaternion).normalize();
 }
 
 
 function buildTunnel(segmentCount = 250, segmentDistance = 2) {
-    let curPosition = new THREE.Vector3(0, 0, 0);
-    let curDirection = new THREE.Vector3(0, 0, -1);
-
-    // Initial random axis of rotation
-    let axis = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize();
-
-    for (let i = 0; i < segmentCount; i++) {
-				addSegment(curPosition, curDirection, i);
-				
-        // Update the position for the next segment
-        curPosition.add(curDirection.clone().multiplyScalar(segmentDistance));
-
-        // Slightly adjust the axis of rotation
-        let axisAdjustment = new THREE.Vector3(
-            (Math.random() - 0.5) * wigliness,
-            (Math.random() - 0.5) * wigliness,
-            (Math.random() - 0.5) * wigliness
-        );
-        axis.add(axisAdjustment).normalize();
-        // Ensure the axis is orthogonal to the current direction
-				axis.projectOnPlane(curDirection).normalize();
-				
-				// update the direction
-        let rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(axis, turnForce);
-        curDirection.applyQuaternion(rotationQuaternion).normalize();
+		for (let i = 0; i < segmentCount; i++) {
+				addSegment();
     }
+}
+
+// Function to remove a segment from the beginning of the tunnel
+function removeSegment() {
+  if (scene.children.length > 0) {
+    scene.remove(scene.children[0]);
+		curRingIndex--;
+  }
+}
+
+
+// Function to update the tunnel dynamically
+function updateTunnel() {
+  if (nSegments < tunnelLength) {
+		addSegment();
+	}
+	
+  // Remove a segment from the beginning if necessary
+  if (scene.children.length > segmentCount) {
+    removeSegment();
+  }
+}
+
+
+function checkCollisions() {
+  if (curRingIndex > scene.children.length - 1) return;
+  let child = scene.children[curRingIndex];
+  if (child.type === 'Mesh' && child.userData.index !== undefined) {
+    // Check if the player has crossed the plane of the ring
+    let ringPosition = child.position;
+    let ringDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(child.quaternion);
+    let playerPosition = camera.position;
+    let playerDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraQuaternion);
+
+    let distanceToPlane = ringDirection.dot(playerPosition.clone().sub(ringPosition));
+    //scoreElement.textContent = `Distance: ${distanceToPlane}`;
+
+    if (distanceToPlane > 0) { // Player has crossed the plane of the ring
+      curRingIndex++;
+      let distanceToCenter = playerPosition.distanceTo(ringPosition);
+      if (distanceToCenter <= 5) {
+        // Player is inside the ring
+        score += 1; //child.userData.index;
+        scoreElement.textContent = `Score: ${score}`;
+      } else {
+        // Player is outside the ring
+        //score -= 1;
+        //scoreElement.textContent = `Score: ${score}`;
+        // Change background color briefly
+        scene.background = new THREE.Color(collisionColor);
+        if (collisionTimer) clearTimeout(collisionTimer);
+        collisionTimer = setTimeout(() => {
+          scene.background = new THREE.Color(backgroundColor);
+        }, collisionDuration);
+      }
+			
+			updateTunnel();
+    }
+  }
 }
 
 function setLight() {
@@ -192,55 +241,15 @@ function setLight() {
 		scene.background = new THREE.Color(backgroundColor);
 }
 
-// not used
-function createWireframeSphere() {
-    const geometry = new THREE.SphereGeometry(300, 16, 16);
-    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-    const wireframeSphere = new THREE.Mesh(geometry, material);
-    wireframeSphere.position.set(0, 0, 0); // Centered at the origin
-    scene.add(wireframeSphere);
-}
 
-let curRing = 0;
-function checkCollisions() {
-		if (curRing > scene.children.length - 1) return;
-		let child = scene.children[curRing];
-		if (child.type === 'Mesh' && child.userData.index !== undefined) {
-				// Check if the player has crossed the plane of the ring
-				let ringPosition = child.position;
-				let ringDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(child.quaternion);
-				let playerPosition = camera.position;
-				let playerDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraQuaternion);
-
-				let distanceToPlane = ringDirection.dot(playerPosition.clone().sub(ringPosition));
-				//scoreElement.textContent = `Distance: ${distanceToPlane}`;
-				
-				if (distanceToPlane > 0) {
-						// Player has crossed the plane of the ring
-						curRing++
-						let distanceToCenter = playerPosition.distanceTo(ringPosition);
-						if (distanceToCenter <= 5) {
-								// Player is inside the ring
-								score += 1; //child.userData.index;
-								scoreElement.textContent = `Score: ${score}`;
-						} else {
-								// Player is outside the ring
-								//score -= 1;
-								//scoreElement.textContent = `Score: ${score}`;
-								// Change background color briefly
-								scene.background = new THREE.Color(collisionColor);
-								if (collisionTimer) clearTimeout(collisionTimer);
-								collisionTimer = setTimeout(() => {
-										scene.background = new THREE.Color(backgroundColor);
-								}, 200);
-						}
-				}
-		}
-}
-
-//createWireframeSphere();
 setLight();
 buildTunnel(segmentCount, segmentDistance);
 
 // Start the game loop
-gameLoop();
+function gameLoop() {
+  updateCameraPosition();
+  applyCameraOrientation();
+  checkCollisions();
+  renderTunnel();
+  requestAnimationFrame(gameLoop);
+} gameLoop();
