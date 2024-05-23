@@ -1,6 +1,7 @@
 const backgroundColor = 0xaab0b3;
 const ringColor1 = 0x777777;
 const ringColor2 = 0x888888;
+const collisionColor = 0xffb0b3;
 
 const segmentCount = 250;
 const segmentDistance = 2;
@@ -14,7 +15,7 @@ const pitchSpeed = 0.00007;
 const pitchDamp = 0.997;
 const movementSpeed = 0.3;
 
-
+const collisionDuration = 500; // Duration of collision color change (ms)
 
 document.body.style.cursor = 'none';
 
@@ -26,7 +27,6 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-
 let cameraQuaternion = new THREE.Quaternion();
 let forwardDirection = new THREE.Vector3(0, 0, -1);
 
@@ -35,6 +35,16 @@ let dPitch = 0;
 let roll = 0;
 let pitch = 0;
 
+let score = 0;
+let scoreElement = document.createElement('div');
+scoreElement.style.position = 'absolute';
+scoreElement.style.top = '10px';
+scoreElement.style.left = '10px';
+scoreElement.style.color = 'white';
+scoreElement.style.fontSize = '24px';
+document.body.appendChild(scoreElement);
+
+let collisionTimer = null;
 
 document.addEventListener('keydown', function(event) {
     switch (event.key) {
@@ -108,6 +118,7 @@ function renderTunnel() {
 function gameLoop() {
 		updateCameraPosition();
 		applyCameraOrientation();
+		checkCollisions();
 		renderTunnel();
 		requestAnimationFrame(gameLoop);
 }
@@ -134,6 +145,7 @@ function addSegment(curPosition, curDirection, i) {
 		quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), curDirection);
 		ring.quaternion.copy(quaternion);
 
+		ring.userData = { index: i }; // Store the index of the ring
 		scene.add(ring);
 }
 
@@ -188,6 +200,42 @@ function createWireframeSphere() {
     scene.add(wireframeSphere);
 }
 
+let curRing = 0;
+function checkCollisions() {
+		if (curRing > scene.children.length - 1) return;
+		let child = scene.children[curRing];
+		if (child.type === 'Mesh' && child.userData.index !== undefined) {
+				// Check if the player has crossed the plane of the ring
+				let ringPosition = child.position;
+				let ringDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(child.quaternion);
+				let playerPosition = camera.position;
+				let playerDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraQuaternion);
+
+				let distanceToPlane = ringDirection.dot(playerPosition.clone().sub(ringPosition));
+				//scoreElement.textContent = `Distance: ${distanceToPlane}`;
+				
+				if (distanceToPlane > 0) {
+						// Player has crossed the plane of the ring
+						curRing++
+						let distanceToCenter = playerPosition.distanceTo(ringPosition);
+						if (distanceToCenter <= 5) {
+								// Player is inside the ring
+								score += 1; //child.userData.index;
+								scoreElement.textContent = `Score: ${score}`;
+						} else {
+								// Player is outside the ring
+								score -= 1;
+								scoreElement.textContent = `Score: ${score}`;
+								// Change background color briefly
+								scene.background = new THREE.Color(collisionColor);
+								if (collisionTimer) clearTimeout(collisionTimer);
+								collisionTimer = setTimeout(() => {
+										scene.background = new THREE.Color(backgroundColor);
+								}, collisionDuration);
+						}
+				}
+		}
+}
 
 //createWireframeSphere();
 setLight();
