@@ -225,8 +225,8 @@ function checkCollisions() {
 								scoreElement.textContent = `Score: ${score}`;
 						} else {
 								// Player is outside the ring
-								score -= 1;
-								scoreElement.textContent = `Score: ${score}`;
+								//score -= 1;
+								//scoreElement.textContent = `Score: ${score}`;
 								// Change background color briefly
 								scene.background = new THREE.Color(collisionColor);
 								if (collisionTimer) clearTimeout(collisionTimer);
