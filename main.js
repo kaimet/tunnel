@@ -15,7 +15,8 @@ const pitchSpeed = 0.00007;
 const pitchDamp = 0.997;
 const movementSpeed = 0.3;
 
-const collisionDuration = 500; // Duration of collision color change (ms)
+
+
 
 document.body.style.cursor = 'none';
 
@@ -231,7 +232,7 @@ function checkCollisions() {
 								if (collisionTimer) clearTimeout(collisionTimer);
 								collisionTimer = setTimeout(() => {
 										scene.background = new THREE.Color(backgroundColor);
-								}, collisionDuration);
+								}, 200);
 						}
 				}
 		}
