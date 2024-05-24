@@ -1,22 +1,22 @@
 const backgroundColor = 0xaaaeb6;
+const collisionColor = 0xff0000;
 const ringColor1 = 0x777777;
 const ringColor2 = 0x888888;
-const collisionColor = 0xff0000; // Color for collision
 
 const segmentCount = 150; // visible segments
-const segmentDistance = 2;
-const tunnelLength = 1000; // Total tunnel length in segments
-
+const segmentDistance = 2; // rings density
+const tunnelLength = 1000; // segments
+const tunnelRad = 5;
 const wigliness = 1.2;
 const turnForce = 0.05;
 
+// controls
 const rollSpeed = 0.0008;
 const rollDamp = 0.98;
 const pitchSpeed = 0.00007;
 const pitchDamp = 0.997;
 const movementSpeed = 0.3;
 
-const collisionDuration = 200; // color change (ms)
 
 document.body.style.cursor = 'none';
 
@@ -44,9 +44,6 @@ scoreElement.style.left = '10px';
 scoreElement.style.color = 'white';
 scoreElement.style.fontSize = '24px';
 document.body.appendChild(scoreElement);
-
-let collisionTimer = null;
-let curRingIndex = 0;
 
 
 document.addEventListener('keydown', function(event) {
@@ -124,11 +121,10 @@ let curDirection = new THREE.Vector3(0, 0, -1);
 //axis of rotation for tunnel's turns
 let axis = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize();
 let ind = 0;
-//let rings = [];
 let nSegments = 0;
 
 function addSegment() {
-		const geometry = new THREE.RingGeometry(4.5, 5, 32);
+		const geometry = new THREE.RingGeometry(tunnelRad - 0.5, tunnelRad, 32);
 		const material = new THREE.MeshBasicMaterial({
 				color: ind % 2 === 0 ? ringColor1 : ringColor2,
 				side: THREE.DoubleSide
@@ -170,7 +166,6 @@ function buildTunnel(segmentCount = 250, segmentDistance = 2) {
     }
 }
 
-// Function to remove a segment from the beginning of the tunnel
 function removeSegment() {
   if (scene.children.length > 0) {
     scene.remove(scene.children[0]);
@@ -178,19 +173,19 @@ function removeSegment() {
   }
 }
 
-
-// Function to update the tunnel dynamically
 function updateTunnel() {
   if (nSegments < tunnelLength) {
 		addSegment();
 	}
 	
-  // Remove a segment from the beginning if necessary
   if (scene.children.length > segmentCount) {
     removeSegment();
   }
 }
 
+
+let curRingIndex = 0;
+let collisionTimer = null;
 
 function checkCollisions() {
   if (curRingIndex > scene.children.length - 1) return;
@@ -203,25 +198,20 @@ function checkCollisions() {
     let playerDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(cameraQuaternion);
 
     let distanceToPlane = ringDirection.dot(playerPosition.clone().sub(ringPosition));
-    //scoreElement.textContent = `Distance: ${distanceToPlane}`;
 
     if (distanceToPlane > 0) { // Player has crossed the plane of the ring
       curRingIndex++;
       let distanceToCenter = playerPosition.distanceTo(ringPosition);
-      if (distanceToCenter <= 5) {
-        // Player is inside the ring
+      if (distanceToCenter <= tunnelRad) { // Player is inside the tunnel
         score += 1; //child.userData.index;
         scoreElement.textContent = `Score: ${score}`;
-      } else {
-        // Player is outside the ring
-        //score -= 1;
-        //scoreElement.textContent = `Score: ${score}`;
-        // Change background color briefly
+				scene.background = new THREE.Color(backgroundColor);
+      } else { // Player is outside the tunnel
         scene.background = new THREE.Color(collisionColor);
         if (collisionTimer) clearTimeout(collisionTimer);
         collisionTimer = setTimeout(() => {
           scene.background = new THREE.Color(backgroundColor);
-        }, collisionDuration);
+        }, 1000);
       }
 			
 			updateTunnel();
@@ -236,7 +226,8 @@ function setLight() {
 
 		const directionalLight = new THREE.DirectionalLight(0xffffff, 1); 
 		directionalLight.position.set(5, 10, 7.5).normalize();
-		scene.add(directionalLight);*/
+		scene.add(directionalLight);
+		*/
 		
 		scene.background = new THREE.Color(backgroundColor);
 }
@@ -245,11 +236,11 @@ function setLight() {
 setLight();
 buildTunnel(segmentCount, segmentDistance);
 
-// Start the game loop
+gameLoop();
 function gameLoop() {
   updateCameraPosition();
   applyCameraOrientation();
   checkCollisions();
   renderTunnel();
   requestAnimationFrame(gameLoop);
-} gameLoop();
+} 
