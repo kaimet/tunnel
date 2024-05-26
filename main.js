@@ -5,7 +5,7 @@ const ringColor2 = 0x888888;
 
 const segmentCount = 150; // visible segments
 const segmentDistance = 2; // rings density
-let tunnelLength = 1000; // segments
+const tunnelLength = 1000; // segments
 const tunnelRad = 5;
 const wigliness = 1.2;
 const turnForce = 0.05;
@@ -57,12 +57,7 @@ document.body.appendChild(skillElement);
 
 document.body.style.cursor = 'none';
 
-					
-					
-const names = [
-  "Amelia", "Emma", "Sophia", "Emily", "Violet", "Layla", "Scarlett", "Abigail", "Eleanor", "Olivia"
-];
-let seeds = names;
+
 
 function generateRandomSeed() {
   return Math.floor(Math.random() * (Number.MAX_SAFE_INTEGER + 1));
@@ -76,13 +71,11 @@ function startNewGame(seed) {
 	if (seed == undefined) { // new random tunnel
 		currentTunnelSeed = generateRandomSeed(); 
     rnd = mulberry32(currentTunnelSeed);
-		tunnelLength = 1000;
 	} else if (seed == -1) { // repeat the same tunnel
 		rnd = mulberry32(currentTunnelSeed);
   } else { // one of predefined tunnels
-    currentTunnelSeed = cyrb128(seeds[seed])[0];
+    currentTunnelSeed = seed; //cyrb128(seeds[seed])[0];
 		rnd = mulberry32(currentTunnelSeed);
-		tunnelLength = 150;
   }
 	
   score = 0;
@@ -127,11 +120,11 @@ document.addEventListener('keydown', function(event) {
             roll = 1;
             break;
 						
-						
-				case 'q':
+					
+				case 'q': /*
 						movementSpeed = skills[0];
 						skillElement.textContent = `Slow`;
-            break;
+            break; */
 				case 'w':
 						movementSpeed = skills[1];
 						skillElement.textContent = ``;
@@ -150,11 +143,20 @@ document.addEventListener('keydown', function(event) {
             startNewGame(-1); // Repeat the same tunnel
             break;
         
-				
+				case '1':
+						startNewGame(4948962452359586); 
+						break;
+						
+				case 'Tab':
+            navigator.clipboard.writeText(currentTunnelSeed.toString());
+            break;
+						
+				/*
         default: // predifined tunnels (mumber keys 0-9)
             if (event.keyCode >= 48 && event.keyCode <= 57) {
                 startNewGame(event.keyCode - 48); 
             }
+				*/
 	
     }
 });
