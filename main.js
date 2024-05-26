@@ -38,6 +38,7 @@ let roll = 0;
 let pitch = 0;
 
 let score = 0;
+let loss = 0;
 let scoreElement = document.createElement('div');
 scoreElement.style.position = 'absolute';
 scoreElement.style.top = '10px';
@@ -56,61 +57,36 @@ document.body.appendChild(skillElement);
 
 document.body.style.cursor = 'none';
 
-
+					
+					
 const names = [
   "Amelia", "Emma", "Sophia", "Emily", "Violet", "Layla", "Scarlett", "Abigail", "Eleanor", "Olivia"
 ];
+let seeds = names;
 
-const seeds = names;
-
-/*
-usage of random generator:
-var seed = cyrb128("apples");
-var rnd = mulberry32(seed[0]);
-var x = rnd(); // in a range [0; 1]
-*/
-
-// Calling cyrb128 will produce a 128-bit hash value from a string which can be used to seed a PRNG. 
-function cyrb128(str) {
-    let h1 = 1779033703, h2 = 3144134277,
-        h3 = 1013904242, h4 = 2773480762;
-    for (let i = 0, k; i < str.length; i++) {
-        k = str.charCodeAt(i);
-        h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
-        h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
-        h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
-        h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
-    }
-    h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
-    h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
-    h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
-    h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
-    return [(h1^h2^h3^h4)>>>0, (h2^h1)>>>0, (h3^h1)>>>0, (h4^h1)>>>0];
+function generateRandomSeed() {
+  return Math.floor(Math.random() * (Number.MAX_SAFE_INTEGER + 1));
 }
 
-// Mulberry32 is a simple generator with a 32-bit state, but is extremely fast and has good quality randomness
-function mulberry32(a) {
-    return function() {
-      var t = a += 0x6D2B79F5;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    }
-}
-
-let rnd = Math.random; 
+let currentTunnelSeed = generateRandomSeed(); 
+let rnd = mulberry32(currentTunnelSeed);
 
 
-function startNewGame(seedIndex) {
-	if (seedIndex !== undefined) { 
-    rnd = mulberry32(cyrb128(seeds[seedIndex])[0]);
-		tunnelLength = 150;
-  } else { 
-    rnd = Math.random;
+function startNewGame(seed) {
+	if (seed == undefined) { // new random tunnel
+		currentTunnelSeed = generateRandomSeed(); 
+    rnd = mulberry32(currentTunnelSeed);
 		tunnelLength = 1000;
+	} else if (seed == -1) { // repeat the same tunnel
+		rnd = mulberry32(currentTunnelSeed);
+  } else { // one of predefined tunnels
+    currentTunnelSeed = cyrb128(seeds[seed])[0];
+		rnd = mulberry32(currentTunnelSeed);
+		tunnelLength = 150;
   }
 	
   score = 0;
+	loss = 0;
   scoreElement.textContent = `Score: ${score}`;
   camera.position.set(0, 0, 150 * movementSpeed);
   cameraQuaternion.set(0, 0, 0, 1); // Reset to initial orientation
@@ -152,43 +128,6 @@ document.addEventListener('keydown', function(event) {
             break;
 						
 						
-				case ' ':
-        case 'Enter':
-            startNewGame();
-            break;
-				
-				// predifined tunnels
-        case '1':
-            startNewGame(0);
-            break;
-        case '2':
-            startNewGame(1);
-            break;
-        case '3':
-            startNewGame(2);
-            break;
-        case '4':
-            startNewGame(3);
-            break;
-        case '5':
-            startNewGame(4);
-            break;
-        case '6':
-            startNewGame(5);
-            break;
-        case '7':
-            startNewGame(6);
-            break;
-        case '8':
-            startNewGame(7);
-            break;
-        case '9':
-            startNewGame(8);
-            break;
-        case '0':
-            startNewGame(9);
-            break;
-						
 				case 'q':
 						movementSpeed = skills[0];
 						skillElement.textContent = `Slow`;
@@ -201,6 +140,22 @@ document.addEventListener('keydown', function(event) {
 						movementSpeed = skills[2];
 						skillElement.textContent = `Fast`;
             break;
+						
+						
+				case ' ':
+        case 'Enter':
+            startNewGame();
+            break;
+        case 'r':
+            startNewGame(-1); // Repeat the same tunnel
+            break;
+        
+				
+        default: // predifined tunnels (mumber keys 0-9)
+            if (event.keyCode >= 48 && event.keyCode <= 57) {
+                startNewGame(event.keyCode - 48); 
+            }
+	
     }
 });
 
@@ -345,9 +300,11 @@ function checkCollisions() {
       let distanceToCenter = playerPosition.distanceTo(ringPosition);
       if (distanceToCenter <= tunnelRad) { // Player is inside the tunnel
         score += 1; //child.userData.index;
-        scoreElement.textContent = `Score: ${score}`;
+        showScore()
 				scene.background = new THREE.Color(backgroundColor);
       } else { // Player is outside the tunnel
+				loss++;
+				showScore()
         scene.background = new THREE.Color(collisionColor);
         if (collisionTimer) clearTimeout(collisionTimer);
         collisionTimer = setTimeout(() => {
@@ -358,6 +315,12 @@ function checkCollisions() {
 			updateTunnel();
     }
   }
+}
+
+function showScore() {
+	let sc = `Score: ${score}`;
+	if (loss > 0) sc += `\u00A0\u00A0\u00A0\u00A0 Loss: ${loss}`;
+	scoreElement.textContent = sc;
 }
 
 function setLight() {
@@ -385,3 +348,40 @@ function gameLoop() {
   renderTunnel();
   requestAnimationFrame(gameLoop);
 } 
+
+
+
+/*
+usage of random generator:
+var seed = cyrb128("apples");
+var rnd = mulberry32(seed[0]);
+var x = rnd(); // in a range [0; 1]
+*/
+
+// Calling cyrb128 will produce a 128-bit hash value from a string which can be used to seed a PRNG. 
+function cyrb128(str) {
+    let h1 = 1779033703, h2 = 3144134277,
+        h3 = 1013904242, h4 = 2773480762;
+    for (let i = 0, k; i < str.length; i++) {
+        k = str.charCodeAt(i);
+        h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+        h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+        h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+        h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+    }
+    h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+    h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+    h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+    h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+    return [(h1^h2^h3^h4)>>>0, (h2^h1)>>>0, (h3^h1)>>>0, (h4^h1)>>>0];
+}
+
+// Mulberry32 is a simple generator with a 32-bit state, but is extremely fast and has good quality randomness
+function mulberry32(a) {
+    return function() {
+      var t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+}
