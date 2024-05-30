@@ -106,7 +106,7 @@ function startNewGame(seed) {
 
 
 document.addEventListener('keydown', function(event) {
-    switch (event.key) {
+    switch (event.code) {
         case 'ArrowUp':
             //pitch = 1; // not used, just 3 keys for controls
             break;
@@ -121,30 +121,39 @@ document.addEventListener('keydown', function(event) {
             break;
 						
 					
-				case 'q': /*
+				case 'KeyQ': /*
 						movementSpeed = skills[0];
 						skillElement.textContent = `Slow`;
             break; */
-				case 'w':
+				case 'KeyW':
 						movementSpeed = skills[1];
 						skillElement.textContent = ``;
             break;
-				case 'e':
+				case 'KeyE':
 						movementSpeed = skills[2];
 						skillElement.textContent = `Fast`;
             break;
 						
 						
-				case ' ':
+				case 'Space':
         case 'Enter':
             startNewGame();
             break;
-        case 'r':
+        case 'KeyR':
             startNewGame(-1); // Repeat the same tunnel
             break;
         
-				case '1':
+				case 'Digit1':
 						startNewGame(4948962452359586); 
+						break;
+				case 'Digit2':
+						startNewGame(5185026096425206); 
+						break;
+				case 'Digit3':
+						startNewGame(6306139870733672); 
+						break;
+				case 'Digit4':
+						startNewGame(5378676244667926); 
 						break;
 						
 				case 'Tab':
